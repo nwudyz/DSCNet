@@ -290,3 +290,19 @@ class DSCNet(nn.Module):
         out = self.sigmoid(out)
 
         return out
+    
+if __name__ == "__main__":
+    model = DSCNet(
+        n_channels=3,
+        n_classes=1,
+        kernel_size=3,
+        extend_scope=1,
+        if_offset=True,
+        device=torch.device("cuda" if torch.cuda.is_available() else "cpu"),
+        number=16,
+        dim=1,
+    )
+    x = torch.rand(2, 3, 256, 256)
+    y = model(x)
+    print(y.shape)
+# 输出：torch.Size([2, 1, 256, 256])

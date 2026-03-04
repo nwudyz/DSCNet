@@ -66,6 +66,8 @@ class DSConv(nn.Module):
         dsc = DSC(input_shape, self.kernel_size, self.extend_scope, self.morph,
                   self.device)
         deformed_feature = dsc.deform_conv(f, offset, self.if_offset)
+        # 确保 deformed_feature 与模型权重在同一设备上
+        deformed_feature = deformed_feature.to(f.device)
         if self.morph == 0:
             x = self.dsc_conv_x(deformed_feature)
             x = self.gn(x)
@@ -248,10 +250,10 @@ class DSC(object):
     """
 
     def _bilinear_interpolate_3D(self, input_feature, y, x):
-        y = y.reshape([-1]).float()
-        x = x.reshape([-1]).float()
+        y = y.reshape([-1]).float().to(self.device)
+        x = x.reshape([-1]).float().to(self.device)
 
-        zero = torch.zeros([]).int()
+        zero = torch.zeros([]).int().to(self.device)
         max_y = self.width - 1
         max_x = self.height - 1
 
@@ -267,7 +269,7 @@ class DSC(object):
         x0 = torch.clamp(x0, zero, max_x)
         x1 = torch.clamp(x1, zero, max_x)
 
-        input_feature_flat = input_feature.flatten()
+        input_feature_flat = input_feature.flatten().to(self.device)
         input_feature_flat = input_feature_flat.reshape(
             self.num_batch, self.num_channels, self.width, self.height)
         input_feature_flat = input_feature_flat.permute(0, 2, 3, 1)
@@ -353,26 +355,23 @@ class DSC(object):
 
 
 # Code for testing the DSConv
-# if __name__ == '__main__':
-#     os.environ["CUDA_VISIBLE_DEVICES"] = '0'
-#     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-#     A = np.random.rand(4, 5, 6, 7)
-#     # A = np.ones(shape=(3, 2, 2, 3), dtype=np.float32)
-#     # print(A)
-#     A = A.astype(dtype=np.float32)
-#     A = torch.from_numpy(A)
-#     # print(A.shape)
-#     conv0 = DSConv(
-#         in_ch=5,
-#         out_ch=10,
-#         kernel_size=15,
-#         extend_scope=1,
-#         morph=0,
-#         if_offset=True,
-#         device=device)
-#     if torch.cuda.is_available():
-#         A = A.to(device)
-#         conv0 = conv0.to(device)
-#     out = conv0(A)
-#     print(out.shape)
-#     print(out)
+if __name__ == '__main__':
+    os.environ["CUDA_VISIBLE_DEVICES"] = '0'
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    A = np.random.rand(4, 5, 6, 7)
+    A = A.astype(dtype=np.float32)
+    A = torch.from_numpy(A)
+    conv0 = DSConv(
+        in_ch=5,
+        out_ch=10,
+        kernel_size=15,
+        extend_scope=1,
+        morph=0,
+        if_offset=True,
+        device=device)
+    if torch.cuda.is_available():
+        A = A.to(device)
+        conv0 = conv0.to(device)
+    out = conv0(A)
+    print(out.shape)
+### 输出：torch.Size([4, 10, 6, 7])
